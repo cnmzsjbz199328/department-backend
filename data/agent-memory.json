@@ -1,0 +1,15 @@
+{
+  "shortTerm": {
+    "recentEvents": ["完成晨会", "开始代码开发"],
+    "currentContext": "办公室",
+    "temporaryGoals": ["修复登录bug"]
+  },
+  "longTerm": {
+    "experiences": ["完成项目A开发"],
+    "relationships": {
+      "同事A": "良好",
+      "同事B": "一般"
+    },
+    "knowledge": ["TypeScript", "Node.js"]
+  }
+}

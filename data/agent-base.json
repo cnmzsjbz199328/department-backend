@@ -1,0 +1,15 @@
+{
+  "agentId": "agent-001",
+  "name": "Test Agent",
+  "personality": {
+    "type": "curious",
+    "traits": ["inquisitive", "adaptable", "optimistic"],
+    "preferences": ["learning", "exploring", "socializing"]
+  },
+  "status": {
+    "energy": 80,
+    "mood": "happy",
+    "location": "home",
+    "lastUpdate": "2023-10-15T09:00:00Z"
+  }
+}
