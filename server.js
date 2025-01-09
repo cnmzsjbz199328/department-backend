@@ -46,28 +46,29 @@ async function writeJsonFile(filename, data) {
 
 async function updateAgentFiles(aiResponse) {
   try {
-    const responseData = aiResponse.choices[0].message.content;
-    if (typeof responseData === 'string') {
-      try {
-        aiResponse.choices[0].message.content = JSON.parse(responseData);
-      } catch {
-        throw new Error('Invalid JSON response from AI');
-      }
+    let responseData = aiResponse.choices[0].message.content;
+    
+    // 移除多余的反引号和换行符
+    responseData = responseData.replace(/```json\n|```/g, '');
+
+    try {
+      responseData = JSON.parse(responseData);
+    } catch (error) {
+      throw new Error('Invalid JSON response from AI');
     }
 
-    const { stateUpdates, memoryUpdates, planUpdates } = aiResponse.choices[0].message.content;
+    const { stateUpdates, memoryUpdates, planUpdates } = responseData;
 
     // 更新 agent-base.json
     const agentBase = await readJsonFile('agent-base.json');
     if (agentBase && stateUpdates) {
-      if (stateUpdates.energyChange) {
-        agentBase.status.energy = Math.max(0, Math.min(100, 
-          agentBase.status.energy + stateUpdates.energyChange));
+      if (stateUpdates.energyChange !== undefined) {
+        agentBase.status.energy = Math.max(0, Math.min(100, agentBase.status.energy + stateUpdates.energyChange));
       }
-      if (stateUpdates.moodChange) {
+      if (stateUpdates.moodChange !== undefined) {
         agentBase.status.mood = stateUpdates.moodChange;
       }
-      if (stateUpdates.locationChange) {
+      if (stateUpdates.locationChange !== undefined) {
         agentBase.status.location = stateUpdates.locationChange;
       }
       await writeJsonFile('agent-base.json', agentBase);
@@ -103,6 +104,9 @@ async function updateAgentFiles(aiResponse) {
       if (memoryUpdates.shortTerm?.removeEvents) {
         agentMemory.shortTerm.recentEvents = agentMemory.shortTerm.recentEvents
           .filter(event => !memoryUpdates.shortTerm.removeEvents.includes(event));
+      }
+      if (memoryUpdates.shortTerm?.temporaryGoals) {
+        agentMemory.shortTerm.temporaryGoals = memoryUpdates.shortTerm.temporaryGoals;
       }
       if (memoryUpdates.longTerm?.experiences) {
         agentMemory.longTerm.experiences.push(...memoryUpdates.longTerm.experiences);
@@ -160,6 +164,7 @@ async function buildAIRequest() {
     },
     memory: {
       recentEvents: agentMemory?.shortTerm?.recentEvents || [],
+      temporaryGoals: agentMemory?.shortTerm?.temporaryGoals || [],
       relationships: agentMemory?.longTerm?.relationships || {}
     },
     constraints: {
@@ -204,9 +209,16 @@ app.post('/api/decide', async (req, res) => {
     console.log('Received request:', req.body);
     
     const requestData = await buildAIRequest();
+    const agentBase = await readJsonFile('agent-base.json');
+    const agentName = agentBase?.name || '智能体';
+    const personalityTraits = agentBase?.personality?.traits.join('、') || '无';
+    const recentEvents = requestData.memory.recentEvents.join('、') || '无';
+    const temporaryGoals = requestData.memory.temporaryGoals.join('、') || '无';
+    const currentPlan = requestData.plans.currentDailyPlan.schedule.join('、') || '无';
+
     const messages = [{
       role: 'system',
-      content: '你是一个智能体，请根据当前状态做出合理决策'
+      content: `你是一个名为${agentName}的智能体，性格特点包括${personalityTraits}。最近的事件有${recentEvents}。当前的临时目标包括${temporaryGoals}。当前的计划包括${currentPlan}。请根据当前状态做出合理决策，并返回以下结构的数据：\n{\n  "decision": {\n    "action": "string",\n    "target": "string",\n    "duration": "number"\n  },\n  "reasoning": {\n    "decisionBasis": "string",\n    "alternativePlans": ["string"]\n  },\n  "stateUpdates": {\n    "energyChange": "number",\n    "moodChange": "string",\n    "locationChange": "string"\n  },\n  "memoryUpdates": {\n    "shortTerm": {\n      "addEvents": ["string"],\n      "removeEvents": ["string"],\n      "temporaryGoals": ["string"]\n    },\n    "longTerm": {\n      "experiences": ["string"],\n      "relationships": {\n        "name": "string"\n      }\n    }\n  },\n  "planUpdates": {\n    "completedTasks": ["string"],\n    "newTasks": ["string"],\n    "adjustments": [{\n      "oldTask": "string",\n      "newTask": "string"\n    }]\n  }\n}`
     }, {
       role: 'user',
       content: JSON.stringify(requestData) + '\n用户输入: ' + req.body.userInput
@@ -242,7 +254,8 @@ app.post('/api/decide', async (req, res) => {
         energy: updatedBase?.status?.energy || 0,
         mood: updatedBase?.status?.mood || "正常",
         location: updatedBase?.status?.location || "未知"
-      }
+      },
+      content: response.choices[0].message.content // 添加content字段
     });
   } catch (error) {
     console.error('Error processing request:', error);

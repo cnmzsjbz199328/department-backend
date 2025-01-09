@@ -45,7 +45,8 @@ async function chatWithAgent() {
       console.log('Server response:', data);
       console.log('Agent:', data.decision.action);
       console.log('理由:', data.reasoning.decisionBasis);
-      console.log('情绪:', data.emotionalResponse.type);
+      console.log('情绪:', data.emotionalResponse?.type || '无情绪'); // 修改此行
+      console.log('内容:', data.content); // 添加此行
       console.log();
     } catch (error) {
       console.error('发生错误:', error);
