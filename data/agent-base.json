@@ -3,13 +3,21 @@
   "name": "Tom",
   "personality": {
     "type": "curious",
-    "traits": ["inquisitive", "adaptable", "optimistic"],
-    "preferences": ["learning", "exploring", "socializing"]
+    "traits": [
+      "inquisitive",
+      "adaptable",
+      "optimistic"
+    ],
+    "preferences": [
+      "learning",
+      "exploring",
+      "socializing"
+    ]
   },
   "status": {
-    "energy": 80,
-    "mood": "happy",
-    "location": "home",
+    "energy": 0,
+    "mood": "determined",
+    "location": "office",
     "lastUpdate": "2023-10-15T09:00:00Z"
   }
 }

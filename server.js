@@ -1,128 +1,14 @@
 import express from 'express';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { readJsonFile } from './components/readJsonFiles.js';
+import { generatePrompt } from './components/generatePrompt.js';
+import { updateAgentFiles } from './components/updateAgentFiles.js';
 import fetch from 'node-fetch';
-import { createRequire } from 'module';
+import { AI_API_URL, AI_API_KEY } from './config.js';
 
-const require = createRequire(import.meta.url);
 const app = express();
 app.use(express.json());
 
 console.log('Server initialization started...');
-
-const AI_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-const AI_API_KEY = '7a51c6d1bd332df2fd71986db4727432.hxU7u4amBL8TlRFe';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const dataDir = path.join(__dirname, 'data');
-
-console.log('Data directory:', dataDir);
-
-async function readJsonFile(filename) {
-  const filePath = path.join(dataDir, filename);
-  console.log(`Reading file: ${filePath}`);
-  try {
-    const data = await fs.promises.readFile(filePath, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error(`Error reading ${filename}:`, error);
-    return null;
-  }
-}
-
-async function writeJsonFile(filename, data) {
-  const filePath = path.join(dataDir, filename);
-  try {
-    await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2));
-    console.log(`Successfully updated ${filename}`);
-    return true;
-  } catch (error) {
-    console.error(`Error writing ${filename}:`, error);
-    return false;
-  }
-}
-
-async function updateAgentFiles(aiResponse) {
-  try {
-    let responseData = aiResponse.choices[0].message.content;
-    
-    // 移除多余的反引号和换行符
-    responseData = responseData.replace(/```json\n|```/g, '');
-
-    try {
-      responseData = JSON.parse(responseData);
-    } catch (error) {
-      throw new Error('Invalid JSON response from AI');
-    }
-
-    const { stateUpdates, memoryUpdates, planUpdates } = responseData;
-
-    // 更新 agent-base.json
-    const agentBase = await readJsonFile('agent-base.json');
-    if (agentBase && stateUpdates) {
-      if (stateUpdates.energyChange !== undefined) {
-        agentBase.status.energy = Math.max(0, Math.min(100, agentBase.status.energy + stateUpdates.energyChange));
-      }
-      if (stateUpdates.moodChange !== undefined) {
-        agentBase.status.mood = stateUpdates.moodChange;
-      }
-      if (stateUpdates.locationChange !== undefined) {
-        agentBase.status.location = stateUpdates.locationChange;
-      }
-      await writeJsonFile('agent-base.json', agentBase);
-    }
-
-    // 更新 agent-plans.json
-    const agentPlans = await readJsonFile('agent-plans.json');
-    if (agentPlans && planUpdates) {
-      if (planUpdates.completedTasks) {
-        agentPlans.dailySchedule.routines = agentPlans.dailySchedule.routines
-          .filter(task => !planUpdates.completedTasks.includes(task));
-      }
-      if (planUpdates.newTasks) {
-        agentPlans.dailySchedule.routines.push(...planUpdates.newTasks);
-      }
-      if (planUpdates.adjustments) {
-        planUpdates.adjustments.forEach(adjustment => {
-          const taskIndex = agentPlans.dailySchedule.routines.indexOf(adjustment.oldTask);
-          if (taskIndex !== -1) {
-            agentPlans.dailySchedule.routines[taskIndex] = adjustment.newTask;
-          }
-        });
-      }
-      await writeJsonFile('agent-plans.json', agentPlans);
-    }
-
-    // 更新 agent-memory.json
-    const agentMemory = await readJsonFile('agent-memory.json');
-    if (agentMemory && memoryUpdates) {
-      if (memoryUpdates.shortTerm?.addEvents) {
-        agentMemory.shortTerm.recentEvents.push(...memoryUpdates.shortTerm.addEvents);
-      }
-      if (memoryUpdates.shortTerm?.removeEvents) {
-        agentMemory.shortTerm.recentEvents = agentMemory.shortTerm.recentEvents
-          .filter(event => !memoryUpdates.shortTerm.removeEvents.includes(event));
-      }
-      if (memoryUpdates.shortTerm?.temporaryGoals) {
-        agentMemory.shortTerm.temporaryGoals = memoryUpdates.shortTerm.temporaryGoals;
-      }
-      if (memoryUpdates.longTerm?.experiences) {
-        agentMemory.longTerm.experiences.push(...memoryUpdates.longTerm.experiences);
-      }
-      if (memoryUpdates.longTerm?.relationships) {
-        Object.assign(agentMemory.longTerm.relationships, memoryUpdates.longTerm.relationships);
-      }
-      await writeJsonFile('agent-memory.json', agentMemory);
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error updating agent files:', error);
-    return false;
-  }
-}
 
 async function buildAIRequest() {
   const [agentBase, agentPlans, agentMemory] = await Promise.all([
@@ -210,15 +96,11 @@ app.post('/api/decide', async (req, res) => {
     
     const requestData = await buildAIRequest();
     const agentBase = await readJsonFile('agent-base.json');
-    const agentName = agentBase?.name || '智能体';
-    const personalityTraits = agentBase?.personality?.traits.join('、') || '无';
-    const recentEvents = requestData.memory.recentEvents.join('、') || '无';
-    const temporaryGoals = requestData.memory.temporaryGoals.join('、') || '无';
-    const currentPlan = requestData.plans.currentDailyPlan.schedule.join('、') || '无';
+    const prompt = generatePrompt(agentBase, requestData);
 
     const messages = [{
       role: 'system',
-      content: `你是一个名为${agentName}的智能体，性格特点包括${personalityTraits}。最近的事件有${recentEvents}。当前的临时目标包括${temporaryGoals}。当前的计划包括${currentPlan}。请根据当前状态做出合理决策，并返回以下结构的数据：\n{\n  "decision": {\n    "action": "string",\n    "target": "string",\n    "duration": "number"\n  },\n  "reasoning": {\n    "decisionBasis": "string",\n    "alternativePlans": ["string"]\n  },\n  "stateUpdates": {\n    "energyChange": "number",\n    "moodChange": "string",\n    "locationChange": "string"\n  },\n  "memoryUpdates": {\n    "shortTerm": {\n      "addEvents": ["string"],\n      "removeEvents": ["string"],\n      "temporaryGoals": ["string"]\n    },\n    "longTerm": {\n      "experiences": ["string"],\n      "relationships": {\n        "name": "string"\n      }\n    }\n  },\n  "planUpdates": {\n    "completedTasks": ["string"],\n    "newTasks": ["string"],\n    "adjustments": [{\n      "oldTask": "string",\n      "newTask": "string"\n    }]\n  }\n}`
+      content: prompt
     }, {
       role: 'user',
       content: JSON.stringify(requestData) + '\n用户输入: ' + req.body.userInput
@@ -255,6 +137,7 @@ app.post('/api/decide', async (req, res) => {
         mood: updatedBase?.status?.mood || "正常",
         location: updatedBase?.status?.location || "未知"
       },
+      reaction: response.choices[0].message.content.reaction || {},
       content: response.choices[0].message.content // 添加content字段
     });
   } catch (error) {

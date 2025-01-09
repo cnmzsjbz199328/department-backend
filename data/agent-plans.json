@@ -1,20 +1,44 @@
 {
-  "yearlyPlans": [{
-    "title": "2023年度计划",
-    "goals": ["完成项目开发", "学习新技术"],
-    "progress": 0.6,
-    "childPlans": ["monthly-10", "monthly-11"]
-  }],
-  "monthlyPlans": [{
-    "id": "monthly-10",
-    "title": "10月计划",
-    "goals": ["完成核心功能开发"],
-    "progress": 0.8
-  }],
+  "yearlyPlans": [
+    {
+      "title": "2023年度计划",
+      "goals": [
+        "完成项目开发",
+        "学习新技术"
+      ],
+      "progress": 0.6,
+      "childPlans": [
+        "monthly-10",
+        "monthly-11"
+      ]
+    }
+  ],
+  "monthlyPlans": [
+    {
+      "id": "monthly-10",
+      "title": "10月计划",
+      "goals": [
+        "完成核心功能开发"
+      ],
+      "progress": 0.8
+    }
+  ],
   "weeklyPlans": [],
   "dailySchedule": {
-    "routines": ["晨会", "代码开发"],
-    "flexibleTasks": ["bug修复"],
-    "timeBlocks": ["09:00-12:00", "14:00-18:00"]
+    "routines": [
+      "品尝便当",
+      "none",
+      "catch up on reading",
+      "spend time with family",
+      "exercise",
+      "none"
+    ],
+    "flexibleTasks": [
+      "bug修复"
+    ],
+    "timeBlocks": [
+      "09:00-12:00",
+      "14:00-18:00"
+    ]
   }
 }

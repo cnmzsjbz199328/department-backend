@@ -1,15 +1,60 @@
 {
   "shortTerm": {
-    "recentEvents": ["完成晨会", "开始代码开发"],
+    "recentEvents": [
+      "完成晨会",
+      "开始代码开发",
+      "专注进行代码开发",
+      "与市场部的刘总及客户讨论方案",
+      "调整代码开发时间以适应会议需求",
+      "休息",
+      "ordering lunch with colleague A",
+      "品尝便当",
+      "evaluating lunch taste",
+      "take a short break",
+      "continue coding",
+      "evaluate lunch taste",
+      "take a short break",
+      "continue coding",
+      "leaving the office",
+      "verification of book title",
+      "continue coding",
+      "continue coding"
+    ],
     "currentContext": "办公室",
-    "temporaryGoals": ["修复登录bug"]
+    "temporaryGoals": [
+      "verify book title"
+    ]
   },
   "longTerm": {
-    "experiences": ["完成项目A开发"],
+    "experiences": [
+      "完成项目A开发",
+      "通过实践提高代码开发能力",
+      "持续专注于代码开发以提高技能",
+      "与客户讨论方案的宝贵经验",
+      "成功调整开发时间以适应会议需求",
+      "在忙碌中找到休息的时机",
+      "having lunch with colleague A",
+      "与同事共进午餐",
+      "tasting office lunch",
+      "had a short break to relax",
+      "successful completion of coding tasks",
+      "regular lunch evaluation practice",
+      "efficient coding session",
+      "recognized the importance of work-life balance",
+      "successful completion of coding tasks",
+      "completed work tasks for the day",
+      "discussed book titles with user",
+      "successful code development sessions",
+      "continued focus on coding"
+    ],
     "relationships": {
       "同事A": "良好",
-      "同事B": "一般"
+      "同事B": "一般",
+      "name": "user"
     },
-    "knowledge": ["TypeScript", "Node.js"]
+    "knowledge": [
+      "TypeScript",
+      "Node.js"
+    ]
   }
 }
