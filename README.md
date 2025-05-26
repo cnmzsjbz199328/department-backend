@@ -1,3 +1,6 @@
+# Thinking Agent
+A Node.js application simulating an AI agent that processes user input, makes decisions using an external AI API, and maintains its state and memory through JSON files. It includes a server component and a command-line interface for interaction.
+
 # Node + Express Service Starter
 
 This is a simple API sample in Node.js with express.js based on [Google Cloud Run Quickstart](https://cloud.google.com/run/docs/quickstarts/build-and-deploy/deploy-nodejs-service).
@@ -297,3 +300,142 @@ Copy1. 异常处理
 方便进行状态更新和管理
 支持系统的可扩展性
 ```
+
+## Features
+- Interactive command-line interface for user interaction.
+- Express.js server to handle API requests.
+- Integration with an external AI API (BigModel.cn GLM-4-Flash) for decision-making.
+- Dynamic prompt generation based on agent's current state, plans, and memory.
+- State persistence: Agent's core attributes, plans, and memory are stored and updated in JSON files (`data/` directory).
+- Modular design with components for prompt generation, file handling, and state updates.
+
+## Project Structure
+*   `server.js`: Main Express.js server application.
+*   `index.js`: Command-line client for interacting with the agent.
+*   `config.js`: Configuration for the AI API (URL and Key).
+*   `components/`: Contains core logic modules.
+    *   `generatePrompt.js`: Generates the prompt for the AI.
+    *   `readJsonFiles.js`: Handles reading and writing JSON data.
+    *   `updateAgentFiles.js`: Updates agent's state files based on AI response.
+*   `data/`: Stores agent's data.
+    *   `agent-base.json`: Core attributes, personality, and current status.
+    *   `agent-plans.json`: Daily schedules and tasks.
+    *   `agent-memory.json`: Short-term and long-term memory.
+*   `package.json`: Project metadata, dependencies, and scripts.
+*   `README.md`: This file.
+
+## Setup and Installation
+1.  **Prerequisites**: Node.js and npm.
+2.  **Clone the repository**: `git clone https://github.com/your-username/thinking-agent.git`
+3.  **Navigate to the project directory**: `cd thinking-agent`
+4.  **Install dependencies**: `npm install`
+
+## Configuration
+
+The `config.js` file stores the configuration for the AI API, including the API URL and your API key.
+
+**Important Security Note:**
+
+For security reasons, especially if you plan to share your repository or deploy this project, it is strongly recommended **not** to hardcode your `AI_API_KEY` directly in the `config.js` file.
+
+Instead, consider using environment variables. Here's how you can approach this:
+
+1.  Create a `.env` file in the root of your project (make sure to add `.env` to your `.gitignore` file).
+2.  Add your API key to the `.env` file:
+    ```
+    AI_API_KEY=your_actual_api_key_here
+    ```
+3.  Install a library like `dotenv` to load these variables:
+    ```bash
+    npm install dotenv
+    ```
+4.  Modify your `config.js` to load the key from `process.env`:
+    ```javascript
+    import dotenv from 'dotenv';
+    dotenv.config();
+
+    export const AI_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+    export const AI_API_KEY = process.env.AI_API_KEY;
+    ```
+
+You will need to sign up at [BigModel.cn](https://open.bigmodel.cn/) to obtain your own API key and update it in your environment variable or directly in `config.js` (if used for purely local, private testing).
+
+## Running the Application
+
+1.  **Start the Server**:
+    Open a terminal and run the following command to start the Express.js server:
+    ```bash
+    node server.js
+    ```
+    The server will typically start on port 3000. You should see log messages in the console indicating that the server is running and listening for requests.
+
+2.  **Start the Client**:
+    Open a separate terminal and run the following command to start the command-line client:
+    ```bash
+    npm start
+    ```
+    This command executes `node index.js` (as defined in the `scripts` section of your `package.json`).
+
+3.  **Interact with the Client**:
+    Once both the server and client are running, you can type your messages in the terminal where the client (`npm start`) is running. Press Enter to send your message to the agent. The agent's response (via the AI API and server) will be displayed in the client terminal.
+    To quit the client, type `exit` and press Enter.
+
+## API Endpoint
+
+### `/api/decide`
+
+*   **Method:** `POST`
+*   **Description:** Receives user input, processes it through the AI agent, updates the agent's state, and returns the agent's decision and reaction.
+*   **Request Body:**
+    A JSON object containing the user's input.
+    ```json
+    {
+      "userInput": "Hello, how are you today?"
+    }
+    ```
+*   **Response Body:**
+    A JSON object detailing the agent's decision, reasoning, state updates, and the raw AI content. The `reaction.response` field is what's typically displayed to the user in the CLI.
+    ```json
+    {
+      "decision": {
+        "action": "string",
+        "target": "string",
+        "duration": "number"
+      },
+      "reasoning": {
+        "decisionBasis": "string",
+        "alternativePlans": ["string"]
+      },
+      "stateUpdates": {
+        "energy": "number",
+        "mood": "string",
+        "location": "string"
+      },
+      "reaction": {
+        "action": "string",
+        "response": "string",
+        "thought": "string"
+      },
+      "content": { /* This would contain the raw, potentially complex, response from the AI API */ }
+    }
+    ```
+
+## How it Works
+1.  User input is submitted via the command-line client (`index.js`).
+2.  The client sends the input to the `/api/decide` endpoint on the `server.js`.
+3.  The server reads the agent's current status, plans, and memory from the JSON files in the `/data` directory.
+4.  A detailed prompt is dynamically generated by `components/generatePrompt.js` using the agent's current data and the user input.
+5.  The server calls the external AI API (configured in `config.js`) with this prompt.
+6.  The AI API returns a response containing the agent's decision, proposed state changes, memory updates, etc., in a JSON format.
+7.  `components/updateAgentFiles.js` parses the AI's response and updates the relevant JSON files in `/data` (e.g., `agent-base.json`, `agent-plans.json`, `agent-memory.json`).
+8.  The server sends a structured JSON response (including the decision and reaction) back to the client.
+9.  The client (`index.js`) displays the agent's textual reaction to the user.
+
+## Potential Future Enhancements/To-Do
+*   More robust error handling and input validation.
+*   Implementation of a comprehensive test suite (unit, integration tests).
+*   More sophisticated memory management and retrieval strategies.
+*   Advanced plan management with support for long-term goals and dynamic replanning.
+*   Development of a web-based interface for richer interaction.
+*   Allowing configuration of different AI models or providers.
+*   Better logging mechanisms for debugging and monitoring.
